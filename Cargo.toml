@@ -5,7 +5,7 @@ name                                    = "raw-git-experiments"
 version                                 = "0.0.0-git"
 publish                                 = false
 edition                                 = "2021"
-
+license                                 = "Apache-2.0 OR MIT"
 
 [dependencies]
 mmrbi                                   = "0.0.18"
