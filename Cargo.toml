@@ -10,4 +10,4 @@ edition                                 = "2021"
 [dependencies]
 mmrbi                                   = "0.0.18"
 flate2                                  = "1"
-sha-1                                   = "0.10"    # XXX: for interop with legacy git sha1s - replace with sha256 soon since I'm not really encumbered by needing said interop
+sha2                                    = "0.10"

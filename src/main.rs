@@ -1,6 +1,8 @@
+// https://git-scm.com/docs/hash-function-transition/
+
 use mmrbi::*;
 
-use sha1::*;
+use sha2::*;
 
 use std::fs::File;
 use std::io::{self, Write as _};
@@ -16,6 +18,9 @@ fn create_demo_git() {
     let workspace = Path::new("");
     assert!(workspace.join("Cargo.lock").exists());
 
+    let _ = std::fs::remove_dir_all("demo.git");
+    let _ = std::fs::remove_dir_all("demo");
+
     let git             = workspace.join("demo.git");
     let git_objects     = git.join("objects");
     let git_refs        = git.join("refs");
@@ -25,12 +30,14 @@ fn create_demo_git() {
 
     mmrbi::fs::write_if_modified_with(git.join("config"), |c|{
         writeln!(c, "[core]")?;
-        writeln!(c, "\trepositoryformatversion = 0")?; // XXX: replace with 1 / SHA256 support
+        writeln!(c, "\trepositoryformatversion = 1")?;
         writeln!(c, "\tfilemode = false")?;
         writeln!(c, "\tbare = true")?;
         writeln!(c, "\tlogallrefupdates = true")?;
         writeln!(c, "\tsymlinks = false")?;
         writeln!(c, "\tignorecase = {:?}", cfg!(target_os="windows"))?;
+        writeln!(c, "[extensions]")?;
+        writeln!(c, "\tobjectFormat = sha256")?;
         Ok(())
     }).unwrap();
 
@@ -55,6 +62,8 @@ fn create_demo_git() {
     mmrbi::fs::write_if_modified_with(git.join("HEAD"), |r|{
         writeln!(r, "ref: refs/heads/master")
     }).unwrap();
+
+    Command::parse("git clone demo.git").unwrap().status0().unwrap();
 }
 
 fn create_dir_all_or_panic(dir: &Path) {
@@ -72,7 +81,7 @@ fn create_or_panic(ty: &str, git_objects: &Path, content: &[&[u8]]) -> Hash {
     let bytes  = content.iter().copied().map(|c| c.len()).sum::<usize>();
     let header = format!("{ty} {bytes}\0");
 
-    let mut hash = Sha1::new();
+    let mut hash = Sha256::new();
     hash.update(header.as_bytes());
     for c in content.iter() { hash.update(c) }
     let hash = Hash::from(hash);
@@ -157,13 +166,13 @@ fn hex(hash: &impl AsRef<[u8]>) -> String {
 }
 
 struct Hash {
-    pub value:  [u8; 20],
+    pub value:  [u8; 32],
     pub hex:    String,
 }
 
-impl From<Sha1> for Hash {
-    fn from(sha1: Sha1) -> Self {
-        let value : [u8; 20] = sha1.finalize().into();
+impl From<Sha256> for Hash {
+    fn from(hash: Sha256) -> Self {
+        let value : [u8; 32] = hash.finalize().into();
         let hex = hex(&value);
         Self { value, hex }
     }
